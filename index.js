@@ -9,7 +9,10 @@ const uri = process.env.MONGO_URI;
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(cors({
+  origin: "https://b13-a9-pet-adoption-platform.vercel.app",
+  credentials: true
+}));
 app.use(express.json());
 
 const client = new MongoClient(uri, {
