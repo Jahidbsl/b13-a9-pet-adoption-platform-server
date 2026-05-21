@@ -6,9 +6,9 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const { jwtVerify, createRemoteJWKSet } = require("jose-cjs");
 
 const uri = process.env.MONGO_URI;
-
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 5000;
+
 app.use(cors());
 app.use(express.json());
 
@@ -46,7 +46,7 @@ return res.status(403).send({ message: "Forbidden" });
 
 async function run() {
 
-  await client.connect();
+
   try {
   
     // ************ Database and Collection Creation **************
@@ -300,4 +300,6 @@ run().catch(console.dir);
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
+
+module.exports = app;
 
