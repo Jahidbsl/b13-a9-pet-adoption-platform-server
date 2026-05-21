@@ -45,6 +45,8 @@ return res.status(403).send({ message: "Forbidden" });
 };
 
 async function run() {
+
+  await client.connect();
   try {
   
     // ************ Database and Collection Creation **************
@@ -269,6 +271,10 @@ app.delete("/adoptions/:id", async (req, res) => {
 });
 app.get("/adoptions/check", async (req, res) => {
   const { petId, userId } = req.query;
+
+if (!petId || !userId) {
+  return res.status(400).send({ message: "Missing params" });
+}
 
   const exists = await adoptionCollection.findOne({
     petId,
