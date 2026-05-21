@@ -46,7 +46,7 @@ return res.status(403).send({ message: "Forbidden" });
 
 async function run() {
   try {
-    await client.connect();
+  
     // ************ Database and Collection Creation **************
     const database = client.db("pet-blossom");
     const petsCollection = database.collection("pets");
@@ -280,8 +280,7 @@ app.get("/adoptions/check", async (req, res) => {
 
     // ********end of Database and Collection Creation **************
 
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
     );
@@ -296,6 +295,3 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-});
