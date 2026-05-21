@@ -3,6 +3,8 @@ const dotenv = require("dotenv");
 dotenv.config();
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { jwtVerify, createRemoteJWKSet } = require("jose-cjs");
+
 const uri = process.env.MONGO_URI;
 
 const app = express();
@@ -18,6 +20,30 @@ const client = new MongoClient(uri, {
   },
 });
 
+const JWKS = createRemoteJWKSet(new URL(process.env.JWKS_URI));
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+
+  if (!authHeader) {
+    return res.status(401).send({ message: "Unauthorized" });
+  }
+    const token = authHeader && authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).send({ message: "Unauthorized" });
+    }
+try{
+const {payload} = await jwtVerify(token,JWKS)
+ req.user = payload;
+console.log(payload, "from verify token middleware");
+next();
+}catch(error){
+return res.status(403).send({ message: "Forbidden" });
+}
+
+ 
+};
+
 async function run() {
   try {
     await client.connect();
@@ -27,7 +53,7 @@ async function run() {
     const adoptionCollection = database.collection("adoptions");
     // 
     //add pet API
-app.post("/add-pet", async (req, res) => {
+app.post("/add-pet",verifyToken, async (req, res) => {
   try {
     const petData = req.body;
 
@@ -90,7 +116,7 @@ app.get("/pets", async (req, res) => {
 });
 
 // get single pet by id
-app.get("/pets/:id", async (req, res) => {
+app.get("/pets/:id", verifyToken, async (req, res) => {
   try {
     const id = req.params.id;
 
@@ -114,7 +140,7 @@ app.get("/pets/:id", async (req, res) => {
   }
 });
 // update pet API
-app.patch("/pets/:id", async (req, res) => {
+app.patch("/pets/:id",verifyToken, async (req, res) => {
   try {
     const petId = req.params.id;
     const updateData = req.body;
@@ -135,7 +161,7 @@ app.patch("/pets/:id", async (req, res) => {
   }
 });
 // delete pet API
-app.delete("/pets/:id", async (req, res) => {
+app.delete("/pets/:id",verifyToken, async (req, res) => {
   try {
     const petId = req.params.id;
 
@@ -152,7 +178,7 @@ app.delete("/pets/:id", async (req, res) => {
   }
 });
 // adoption API
-app.post("/adopt", async (req, res) => {
+app.post("/adopt",verifyToken, async (req, res) => {
   try {
     const adoptionData = req.body;
 
