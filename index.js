@@ -183,18 +183,48 @@ app.delete("/pets/:id",verifyToken, async (req, res) => {
   }
 });
 // adoption API
-app.post("/adopt",verifyToken, async (req, res) => {
+app.post("/adopt", verifyToken, async (req, res) => {
   try {
     const adoptionData = req.body;
 
-    console.log(adoptionData, "from adopt API");
+    // find pet
+    const pet = await petsCollection.findOne({
+      _id: new ObjectId(adoptionData.petId),
+    });
 
-    const result = await adoptionCollection.insertOne(adoptionData);
+    // check already adopted
+    if (pet?.status === "adopted") {
+      return res.status(400).send({
+        message: "Pet already adopted",
+      });
+    }
+
+    // check already requested
+    const existingRequest =
+      await adoptionCollection.findOne({
+        petId: adoptionData.petId,
+        userId: adoptionData.userId,
+      });
+
+    if (existingRequest) {
+      return res.status(400).send({
+        message: "You already requested this pet",
+      });
+    }
+
+    // default status
+    adoptionData.status = "pending";
+
+    const result =
+      await adoptionCollection.insertOne(adoptionData);
 
     res.send(result);
   } catch (error) {
     console.log(error);
-    res.status(500).send({ message: "Server error" });
+
+    res.status(500).send({
+      message: "Server error",
+    });
   }
 });
 // get all adoptions API
@@ -242,17 +272,63 @@ app.get("/adoptions/pet/:petId", async (req, res) => {
 app.patch("/adoptions/:id", async (req, res) => {
   try {
     const id = req.params.id;
+
     const { status } = req.body;
 
-    const result = await adoptionCollection.updateOne(
+    // find adoption request
+    const adoption =
+      await adoptionCollection.findOne({
+        _id: new ObjectId(id),
+      });
+
+    // update request status
+    await adoptionCollection.updateOne(
       { _id: new ObjectId(id) },
-      { $set: { status } }
+      {
+        $set: { status },
+      }
     );
 
-    res.send(result);
+    // approve logic
+    if (status === "approved") {
+      // update pet status
+      await petsCollection.updateOne(
+        {
+          _id: new ObjectId(adoption.petId),
+        },
+        {
+          $set: {
+            status: "adopted",
+          },
+        }
+      );
+
+      // reject all other requests
+      await adoptionCollection.updateMany(
+        {
+          petId: adoption.petId,
+          _id: {
+            $ne: new ObjectId(id),
+          },
+        },
+        {
+          $set: {
+            status: "rejected",
+          },
+        }
+      );
+    }
+
+    res.send({
+      success: true,
+      message: `Request ${status}`,
+    });
   } catch (error) {
     console.log(error);
-    res.status(500).send({ message: "Server error" });
+
+    res.status(500).send({
+      message: "Server error",
+    });
   }
 });
 // cencel adoption API
